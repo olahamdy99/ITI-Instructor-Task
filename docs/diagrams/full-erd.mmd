@@ -1,0 +1,151 @@
+erDiagram
+
+    JOB_ROLES ||--o{ CANDIDATES : has
+    JOB_ROLES ||--o{ EVALUATION_TEMPLATES : has
+    JOB_ROLES ||--o{ SHORTLISTS : has
+
+    CANDIDATES ||--o{ CANDIDATE_DOCUMENTS : has
+    CANDIDATES ||--o{ SCREENING_RUNS : has
+    CANDIDATES ||--o{ SHORTLIST_CANDIDATES : appears_in
+
+    EVALUATION_TEMPLATES ||--o{ EVALUATION_CRITERIA : contains
+    EVALUATION_TEMPLATES ||--o{ SCREENING_RUNS : used_for
+
+    SCREENING_RUNS ||--o{ SCREENING_EVIDENCE : produces
+    SCREENING_RUNS ||--o{ SCREENING_SCORES : produces
+    SCREENING_RUNS ||--o{ SHORTLIST_CANDIDATES : supports
+
+    EVALUATION_CRITERIA ||--o{ SCREENING_EVIDENCE : evaluated_by
+    EVALUATION_CRITERIA ||--o{ SCREENING_SCORES : scored_by
+
+    CANDIDATE_DOCUMENTS ||--o{ SCREENING_EVIDENCE : source_of
+
+    SHORTLISTS ||--o{ SHORTLIST_CANDIDATES : contains
+    SHORTLIST_CANDIDATES ||--o{ INTERVIEW_PROBES : has
+
+    SHORTLISTS ||--o{ REVIEW_QUEUE_ITEMS : submitted_for_review
+    USERS ||--o{ REVIEW_QUEUE_ITEMS : assigned_to
+    REVIEW_QUEUE_ITEMS ||--o{ REVIEW_ACTIONS : has
+    USERS ||--o{ REVIEW_ACTIONS : performs
+
+
+    JOB_ROLES {
+        bigint id
+        string title
+        string description
+        string department
+        string status
+    }
+
+    CANDIDATES {
+        bigint id
+        bigint job_role_id
+        string reference_code
+    }
+
+    CANDIDATE_DOCUMENTS {
+        bigint id
+        bigint candidate_id
+        string type
+        string file_path
+        string original_name
+        string mime_type
+        bigint size
+        string processing_status
+        text failure_reason
+    }
+
+    EVALUATION_TEMPLATES {
+        bigint id
+        bigint job_role_id
+        string name
+        int version
+        boolean is_active
+    }
+
+    EVALUATION_CRITERIA {
+        bigint id
+        bigint evaluation_template_id
+        string name
+        string description
+        decimal score_percentage
+        decimal max_score
+    }
+
+    SCREENING_RUNS {
+        bigint id
+        bigint candidate_id
+        bigint evaluation_template_id
+        string status
+        decimal final_score
+        timestamp started_at
+        timestamp completed_at
+    }
+
+    SCREENING_EVIDENCE {
+        bigint id
+        bigint screening_run_id
+        bigint evaluation_criterion_id
+        bigint candidate_document_id
+        text evidence_text
+        int page_number
+    }
+
+    SCREENING_SCORES {
+        bigint id
+        bigint screening_run_id
+        bigint evaluation_criterion_id
+        decimal score
+        decimal weighted_score
+        text reasoning
+    }
+
+    SHORTLISTS {
+        bigint id
+        bigint job_role_id
+        string status
+        timestamp generated_at
+    }
+
+    SHORTLIST_CANDIDATES {
+        bigint id
+        bigint shortlist_id
+        bigint candidate_id
+        bigint screening_run_id
+        int rank
+        decimal final_score
+    }
+
+    INTERVIEW_PROBES {
+        bigint id
+        bigint shortlist_candidate_id
+        text question
+        text reason
+        string priority
+    }
+
+    REVIEW_QUEUE_ITEMS {
+        bigint id
+        bigint shortlist_id
+        bigint assigned_to
+        string priority
+        string status
+        timestamp sla_due_at
+        timestamp escalated_at
+        timestamp reviewed_at
+    }
+
+    REVIEW_ACTIONS {
+        bigint id
+        bigint review_queue_item_id
+        bigint reviewer_id
+        string action
+        text comment
+        json edited_payload
+    }
+
+    USERS {
+        bigint id
+        string name
+        string email
+    }
