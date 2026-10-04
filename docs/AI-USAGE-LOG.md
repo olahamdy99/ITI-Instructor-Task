@@ -28,7 +28,7 @@ AI suggested:
 - Foreign key relationship with `candidate_documents` was confirmed.
 - pgvector `embedding` column was confirmed in the generated table.
 
-
+*******************************************************************************
 ### Additional Task
 Implemented the candidate document upload flow.
 
@@ -61,3 +61,17 @@ AI assisted with:
 - The API returned HTTP `201 Created`.
 - The file path was stored successfully.
 - A `candidate_documents` record was created with `processing_status = pending`.
+
+*******************************************************************************
+### AI Assistance
+Dependency Security Review
+- Composer audit was executed after adding document extraction dependencies.
+- Four security advisories were detected.
+- The advisories affected `laravel/framework`, not the newly added PDF/DOCX extraction packages.
+- PHPWord was initially installed at version 1.1 because the Docker image was missing the `gd` PHP extension.
+- The Docker configuration was reviewed to add `gd` support before continuing with document extraction.
+- Ran `composer audit` after upgrading PHPWord to `1.4.0`.
+- No new advisories were introduced by the extraction libraries.
+
+## Flag (postpone)
+- The remaining advisories are associated with `laravel/framework`.
