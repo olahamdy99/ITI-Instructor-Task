@@ -11,6 +11,8 @@ services:
       - .:/var/www/html
     ports:
       - "8000:8000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       - postgres
       - redis
