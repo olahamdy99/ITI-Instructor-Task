@@ -4,7 +4,11 @@ namespace App\Services;
 
 use App\Infrastructure\DocumentExtraction\DocumentTextExtractorResolver;
 use App\Models\CandidateDocument;
+use App\Services\DocumentChunker;
+use App\Services\DocumentTextCleaner;
+use App\Application\Contracts\EmbeddingProviderInterface;   
 use Illuminate\Filesystem\FilesystemAdapter;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Throwable;
 
@@ -13,7 +17,8 @@ class DocumentProcessingService
     public function __construct(
         private DocumentTextExtractorResolver $extractorResolver,
         private DocumentTextCleaner $textCleaner,
-        private DocumentChunker $documentChunker
+        private DocumentChunker $documentChunker,
+        private EmbeddingProviderInterface $embeddingProvider
     ) {
     }
 
@@ -54,16 +59,32 @@ class DocumentProcessingService
 
             $document->chunks()->delete();
 
-            foreach ($chunks as $chunk) {
-                $document->chunks()->create([
+            foreach ($chunks as $chunk) { 
+                $embedding = $this->embeddingProvider->embed( $chunk['content'] );
+                $documentChunk = $document->chunks()->create([
                     'chunk_index' => $chunk['chunk_index'],
                     'content' => $chunk['content'],
                     'page_number' => null,
                     'metadata' => [
                         'mime_type' => $document->mime_type,
                         'original_name' => $document->original_name,
+                        'embedding_provider' => 'ollama',
+                        'embedding_model' => 'nomic-embed-text',
+                        'embedding_dimensions' => $this->embeddingProvider->dimensions(),
                     ],
                 ]);
+
+            $vector = '[' . implode(',', $embedding) . ']';
+
+            DB::statement(
+                'UPDATE document_chunks
+                SET embedding = CAST(? AS vector)
+                WHERE id = ?',
+                [
+                    $vector,
+                    $documentChunk->id,
+                ]
+            );
             }
 
             $document->update([
