@@ -11,11 +11,13 @@ use Throwable;
 class DocumentProcessingService
 {
     public function __construct(
-        private DocumentTextExtractorResolver $extractorResolver
+        private DocumentTextExtractorResolver $extractorResolver,
+        private DocumentTextCleaner $textCleaner,
+        private DocumentChunker $documentChunker
     ) {
     }
 
-    public function process(CandidateDocument $document): string
+    public function process(CandidateDocument $document): array
     {
         try {
             $document->update([
@@ -44,12 +46,32 @@ class DocumentProcessingService
                 );
             }
 
+            $cleanText = $this->textCleaner->clean($text);
+
+            $chunks = $this->documentChunker->chunk(
+                $cleanText
+            );
+
+            $document->chunks()->delete();
+
+            foreach ($chunks as $chunk) {
+                $document->chunks()->create([
+                    'chunk_index' => $chunk['chunk_index'],
+                    'content' => $chunk['content'],
+                    'page_number' => null,
+                    'metadata' => [
+                        'mime_type' => $document->mime_type,
+                        'original_name' => $document->original_name,
+                    ],
+                ]);
+            }
+
             $document->update([
                 'processing_status' => 'processed',
                 'failure_reason' => null,
             ]);
 
-            return $text;
+            return $chunks;
         } catch (Throwable $exception) {
             $document->update([
                 'processing_status' => 'failed',
