@@ -4,6 +4,8 @@ namespace App\Providers;
 use App\Infrastructure\DocumentExtraction\DocxTextExtractor;
 use App\Infrastructure\DocumentExtraction\DocumentTextExtractorResolver;
 use App\Infrastructure\DocumentExtraction\PdfTextExtractor;
+use App\Application\Contracts\EmbeddingProviderInterface;
+use App\Infrastructure\AI\OllamaEmbeddingProvider;
 
 use Illuminate\Support\ServiceProvider;
 
@@ -20,6 +22,11 @@ class AppServiceProvider extends ServiceProvider
                 new DocxTextExtractor(),
             ]);
         });
+
+        $this->app->bind(
+            EmbeddingProviderInterface::class,
+            OllamaEmbeddingProvider::class
+        );
     }
 
     /**
