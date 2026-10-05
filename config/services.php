@@ -31,4 +31,12 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'ollama' => [
+    'url' => env('OLLAMA_URL', 'http://host.docker.internal:11434'),
+    'embedding_model' => env(
+        'OLLAMA_EMBEDDING_MODEL',
+        'nomic-embed-text'
+    ),
+],
+
 ];
