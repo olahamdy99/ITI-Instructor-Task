@@ -78,18 +78,24 @@ class RagAnswerService
             ];
         }
 
-        $systemPrompt = <<<'PROMPT'
-You are an HR talent screening assistant.
+        $promptVersion = config(
+            'ai.rag.prompt_version',
+            'v1'
+        );
 
-Answer the question using ONLY the provided evidence.
+        $promptPath = resource_path(
+            "prompts/rag/{$promptVersion}/system.txt"
+        );
 
-Rules:
-- Do not use outside knowledge.
-- Do not invent candidate experience, skills, achievements, or qualifications.
-- If the evidence does not support a claim, say that the evidence is insufficient.
-- Keep the answer concise and factual.
-- Refer to evidence using labels such as [Evidence 1], [Evidence 2].
-PROMPT;
+        if (! file_exists($promptPath)) {
+            throw new \RuntimeException(
+                "RAG prompt version [{$promptVersion}] was not found."
+            );
+        }
+
+        $systemPrompt = trim(
+            file_get_contents($promptPath)
+        );
 
         $userPrompt =
             "Question:\n"
