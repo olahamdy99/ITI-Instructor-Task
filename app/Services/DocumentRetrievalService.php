@@ -26,6 +26,7 @@ class DocumentRetrievalService
            candidate_document_id,
            chunk_index,
            content,
+           page_number,
            metadata,
            embedding <=> CAST(? AS vector) AS distance
        FROM document_chunks
@@ -55,6 +56,7 @@ class DocumentRetrievalService
                 candidate_document_id,
                 chunk_index,
                 content,
+                page_number,
                 metadata,
                 ts_rank_cd(
                     to_tsvector(\'simple\', content),
@@ -122,6 +124,8 @@ class DocumentRetrievalService
     ) {
         $document = $documents[$id];
 
+        $metadata = is_string($document->metadata)? json_decode($document->metadata, true): $document->metadata;
+        $metadata = is_array($metadata) ? $metadata : [];
         $results[] = [
             'id' => $document->id,
             'candidate_document_id' => $document->candidate_document_id,
@@ -129,6 +133,12 @@ class DocumentRetrievalService
             'content' => $document->content,
             'metadata' => $document->metadata,
             'fusion_score' => $score,
+
+            'citation' => [
+                'source' => $metadata['original_name'] ?? 'Unknown source',
+                'chunk_index' => $document->chunk_index,
+                'page_number' => $document->page_number ?? null,
+            ],
         ];
     }
 
