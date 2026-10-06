@@ -19,13 +19,14 @@ class DocumentRetrievalService
     ): array {
         $embedding = $this->embeddingProvider->embed($query);
         $vector = '[' . implode(',', $embedding) . ']';
-        return DB::select(
+        $semanticResults = DB::select(
             '
        SELECT
            id,
            candidate_document_id,
            chunk_index,
            content,
+           page_number,
            metadata,
            embedding <=> CAST(? AS vector) AS distance
        FROM document_chunks
@@ -41,6 +42,8 @@ class DocumentRetrievalService
                 $limit,
             ]
         );
+
+        return $semanticResults;
     }
 
     public function keywordSearch(
@@ -55,6 +58,7 @@ class DocumentRetrievalService
                 candidate_document_id,
                 chunk_index,
                 content,
+                page_number,
                 metadata,
                 ts_rank_cd(
                     to_tsvector(\'simple\', content),
@@ -122,6 +126,8 @@ class DocumentRetrievalService
     ) {
         $document = $documents[$id];
 
+        $metadata = is_string($document->metadata)? json_decode($document->metadata, true): $document->metadata;
+        $metadata = is_array($metadata) ? $metadata : [];
         $results[] = [
             'id' => $document->id,
             'candidate_document_id' => $document->candidate_document_id,
@@ -129,9 +135,61 @@ class DocumentRetrievalService
             'content' => $document->content,
             'metadata' => $document->metadata,
             'fusion_score' => $score,
+
+            'citation' => [
+                'source' => $metadata['original_name'] ?? 'Unknown source',
+                'chunk_index' => $document->chunk_index,
+                'page_number' => $document->page_number ?? null,
+            ],
         ];
     }
 
     return $results;
+    }
+
+    public function searchWithConfidence(string $query,int $candidateDocumentId,int $limit = 5,float $maxSemanticDistance = 0.45): array 
+    {
+        $semanticResults = $this->search(
+            $query,
+            $candidateDocumentId,
+            $limit
+        );
+
+        if (empty($semanticResults)) {
+            return [
+                'status' => 'refused',
+                'reason' => 'No evidence found in the candidate documents.',
+                'confidence' => null,
+                'results' => [],
+            ];
+        }
+
+        $bestDistance = (float) $semanticResults[0]->distance;
+
+        if ($bestDistance > $maxSemanticDistance) {
+            return [
+                'status' => 'refused',
+                'reason' => 'Insufficient evidence found in the candidate documents.',
+                'confidence' => [
+                    'best_semantic_distance' => $bestDistance,
+                    'threshold' => $maxSemanticDistance,
+                ],
+                'results' => [],
+            ];
+        }
+
+        return [
+            'status' => 'accepted',
+            'reason' => null,
+            'confidence' => [
+                'best_semantic_distance' => $bestDistance,
+                'threshold' => $maxSemanticDistance,
+            ],
+            'results' => $this->hybridSearch(
+                $query,
+                $candidateDocumentId,
+                $limit
+            ),
+        ];
     }
 }
