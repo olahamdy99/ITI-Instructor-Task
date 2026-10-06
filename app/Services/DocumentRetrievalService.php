@@ -19,7 +19,7 @@ class DocumentRetrievalService
     ): array {
         $embedding = $this->embeddingProvider->embed($query);
         $vector = '[' . implode(',', $embedding) . ']';
-        return DB::select(
+        $semanticResults = DB::select(
             '
        SELECT
            id,
@@ -42,6 +42,15 @@ class DocumentRetrievalService
                 $limit,
             ]
         );
+
+        // foreach ($semanticResults as $result) {
+        //     dump([
+        //         'chunk_index' => $result->chunk_index,
+        //         'distance' => $result->distance,
+        //         'content' => mb_substr($result->content, 0, 200),
+        //     ]);
+        // }
+        return $semanticResults;
     }
 
     public function keywordSearch(
@@ -143,5 +152,51 @@ class DocumentRetrievalService
     }
 
     return $results;
+    }
+
+    public function searchWithConfidence(string $query,int $candidateDocumentId,int $limit = 5,float $maxSemanticDistance = 0.45): array 
+    {
+        $semanticResults = $this->search(
+            $query,
+            $candidateDocumentId,
+            $limit
+        );
+
+        if (empty($semanticResults)) {
+            return [
+                'status' => 'refused',
+                'reason' => 'No evidence found in the candidate documents.',
+                'confidence' => null,
+                'results' => [],
+            ];
+        }
+
+        $bestDistance = (float) $semanticResults[0]->distance;
+
+        if ($bestDistance > $maxSemanticDistance) {
+            return [
+                'status' => 'refused',
+                'reason' => 'Insufficient evidence found in the candidate documents.',
+                'confidence' => [
+                    'best_semantic_distance' => $bestDistance,
+                    'threshold' => $maxSemanticDistance,
+                ],
+                'results' => [],
+            ];
+        }
+
+        return [
+            'status' => 'accepted',
+            'reason' => null,
+            'confidence' => [
+                'best_semantic_distance' => $bestDistance,
+                'threshold' => $maxSemanticDistance,
+            ],
+            'results' => $this->hybridSearch(
+                $query,
+                $candidateDocumentId,
+                $limit
+            ),
+        ];
     }
 }
