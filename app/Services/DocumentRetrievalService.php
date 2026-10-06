@@ -42,4 +42,37 @@ class DocumentRetrievalService
             ]
         );
     }
+
+    public function keywordSearch(
+    string $query,
+    int $candidateDocumentId,
+    int $limit = 5
+    ): array {
+        return DB::select(
+            '
+            SELECT
+                id,
+                candidate_document_id,
+                chunk_index,
+                content,
+                metadata,
+                ts_rank_cd(
+                    to_tsvector(\'simple\', content),
+                    plainto_tsquery(\'simple\', ?)
+                ) AS keyword_score
+            FROM document_chunks
+            WHERE candidate_document_id = ?
+            AND to_tsvector(\'simple\', content)
+                @@ plainto_tsquery(\'simple\', ?)
+            ORDER BY keyword_score DESC
+            LIMIT ?
+            ',
+            [
+                $query,
+                $candidateDocumentId,
+                $query,
+                $limit,
+            ]
+        );
+    }
 }
