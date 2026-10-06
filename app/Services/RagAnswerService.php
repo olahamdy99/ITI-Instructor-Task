@@ -2,10 +2,13 @@
 
 namespace App\Services;
 
+use App\Application\Contracts\LlmProviderInterface;
+
 class RagAnswerService
 {
     public function __construct(
-        private DocumentRetrievalService $retrievalService
+        private DocumentRetrievalService $retrievalService,
+        private LlmProviderInterface $llmProvider
     ) {
     }
 
@@ -51,6 +54,60 @@ class RagAnswerService
             'confidence' => $retrieval['confidence'],
             'context' => implode("\n\n", $contextParts),
             'citations' => $citations,
+        ];
+    }
+
+    public function answer(
+        string $question,
+        int $candidateDocumentId,
+        int $limit = 5
+    ): array {
+        $prepared = $this->prepareContext(
+            $question,
+            $candidateDocumentId,
+            $limit
+        );
+
+        if ($prepared['status'] === 'refused') {
+            return [
+                'status' => 'refused',
+                'answer' => null,
+                'reason' => $prepared['reason'],
+                'confidence' => $prepared['confidence'],
+                'citations' => [],
+            ];
+        }
+
+        $systemPrompt = <<<'PROMPT'
+You are an HR talent screening assistant.
+
+Answer the question using ONLY the provided evidence.
+
+Rules:
+- Do not use outside knowledge.
+- Do not invent candidate experience, skills, achievements, or qualifications.
+- If the evidence does not support a claim, say that the evidence is insufficient.
+- Keep the answer concise and factual.
+- Refer to evidence using labels such as [Evidence 1], [Evidence 2].
+PROMPT;
+
+        $userPrompt =
+            "Question:\n"
+            . $question
+            . "\n\nEvidence:\n"
+            . $prepared['context'];
+
+        $answer = $this->llmProvider->complete(
+            $systemPrompt,
+            $userPrompt
+        );
+
+        return [
+            'status' => 'answered',
+            'answer' => $answer,
+            'reason' => null,
+            'confidence' => $prepared['confidence'],
+            'citations' => $prepared['citations'],
         ];
     }
 }
