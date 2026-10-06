@@ -5,7 +5,9 @@ use App\Infrastructure\DocumentExtraction\DocxTextExtractor;
 use App\Infrastructure\DocumentExtraction\DocumentTextExtractorResolver;
 use App\Infrastructure\DocumentExtraction\PdfTextExtractor;
 use App\Application\Contracts\EmbeddingProviderInterface;
+use App\Application\Contracts\LlmProviderInterface;
 use App\Infrastructure\AI\OllamaEmbeddingProvider;
+use App\Infrastructure\AI\OllamaLlmProvider;
 
 use Illuminate\Support\ServiceProvider;
 
@@ -26,6 +28,11 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(
             EmbeddingProviderInterface::class,
             OllamaEmbeddingProvider::class
+        );
+
+        $this->app->bind(
+            LlmProviderInterface::class,
+            OllamaLlmProvider::class
         );
     }
 
