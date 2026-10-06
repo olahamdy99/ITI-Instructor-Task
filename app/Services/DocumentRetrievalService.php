@@ -43,13 +43,6 @@ class DocumentRetrievalService
             ]
         );
 
-        // foreach ($semanticResults as $result) {
-        //     dump([
-        //         'chunk_index' => $result->chunk_index,
-        //         'distance' => $result->distance,
-        //         'content' => mb_substr($result->content, 0, 200),
-        //     ]);
-        // }
         return $semanticResults;
     }
 
