@@ -75,4 +75,63 @@ class DocumentRetrievalService
             ]
         );
     }
+
+    public function hybridSearch( string $query, int $candidateDocumentId, int $limit = 5 ): array { $candidateLimit = max($limit * 3, 10);
+    $semanticResults = $this->search(
+        $query,
+        $candidateDocumentId,
+        $candidateLimit
+    );
+
+    $keywordResults = $this->keywordSearch(
+        $query,
+        $candidateDocumentId,
+        $candidateLimit
+    );
+
+    $scores = [];
+    $documents = [];
+
+    $k = 60;
+
+    foreach ($semanticResults as $rank => $result) {
+        $id = $result->id;
+
+        $scores[$id] = ($scores[$id] ?? 0)
+            + 1 / ($k + $rank + 1);
+
+        $documents[$id] = $result;
+    }
+
+    foreach ($keywordResults as $rank => $result) {
+        $id = $result->id;
+
+        $scores[$id] = ($scores[$id] ?? 0)
+            + 1 / ($k + $rank + 1);
+
+        $documents[$id] = $result;
+    }
+
+    arsort($scores);
+
+    $results = [];
+
+    foreach (
+        array_slice($scores, 0, $limit, true)
+        as $id => $score
+    ) {
+        $document = $documents[$id];
+
+        $results[] = [
+            'id' => $document->id,
+            'candidate_document_id' => $document->candidate_document_id,
+            'chunk_index' => $document->chunk_index,
+            'content' => $document->content,
+            'metadata' => $document->metadata,
+            'fusion_score' => $score,
+        ];
+    }
+
+    return $results;
+    }
 }
