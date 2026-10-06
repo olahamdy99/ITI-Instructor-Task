@@ -37,6 +37,10 @@ return [
         'OLLAMA_EMBEDDING_MODEL',
         'nomic-embed-text'
     ),
+    'chat_model' => env(
+        'OLLAMA_CHAT_MODEL',
+        'llama3.2:3b'
+    ),
 ],
 
 ];
